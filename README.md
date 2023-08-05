@@ -206,6 +206,24 @@ function openURL() {
 
 ## 其他
 
+### Special Thanks：
+
+[ESP8266 – ESP8266WebServer库 – arg – 太极创客 (taichi-maker.com)](http://www.taichi-maker.com/homepage/iot-development/iot-dev-reference/esp8266-c-plus-plus-reference/esp8266webserver/arg/)
+
+[玩转 ESP32 + Arduino(二十八) TFT_eSPI库驱动ST7789(SPI接口) - 简书 (jianshu.com)](https://www.jianshu.com/p/8631a10b5533)
+
+[玩转 ESP32 + Arduino (二十一) SPIFFS文件系统_finedayforu的博客-CSDN博客](https://blog.csdn.net/finedayforu/article/details/108661563)
+
+https://openai.com/chatgpt
+
+### 结语：
+
+该项目从**2021年09月05日**开始构思，目前为止基本要完成了。它几乎代表了我的**最高技术力**，希望该项目能为开源事业添砖加瓦。
+
+在开发过程中，我也吸取到不少经验和教训，这里尽量分享出来，希望能帮助到各位。
+
+
+
 ###### 总结经验：
 
 > 怎么调试都不成功的话，重新下载库文件再配置一遍会好
