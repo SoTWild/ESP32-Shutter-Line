@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>发送数据至服务器</title>
+</head>
+
+<body>
+    <center>
+        <h1>请输入相应参数进行设置：</h1>
+        <p>（时长单位为秒，快门速度小于一秒时正值，输入分母。大于一秒时负值，输入时长）</p>
+        <p>（快门速度为0时自动使用机内设置）</p>
+        <p>（无需自动对焦输入0，启用自动对焦输入1）</p>
+        <form>
+            <h3>预设A：</h3>
+            <label for="input1-1">定时时长：</label>
+            <input type="number" id="input1-1" name="input1-1"><br>
+            <label for="input2-1">拍摄张数：</label>
+            <input type="number" id="input1-2" name="input1-2"><br>
+            <label for="input3-1">拍摄间隔：</label>
+            <input type="number" id="input1-3" name="input1-3"><br>
+            <label for="input4-1">自动对焦：</label>
+            <input type="number" id="input1-4" name="input1-4"><br>
+            <label for="input5-1">快门速度：</label>
+            <input type="number" id="input1-5" name="input1-5"><br><br>
+            <button type="button" onclick="openURL('1')">设置</button>
+            <hr>
+
+            <h3>预设B</h3>
+            <label for="input2-1">定时时长：</label>
+            <input type="number" id="input2-1" name="input2-1"><br>
+            <label for="input2-2">拍摄张数：</label>
+            <input type="number" id="input2-2" name="input2-2"><br>
+            <label for="input2-3">拍摄间隔：</label>
+            <input type="number" id="input2-3" name="input2-3"><br>
+            <label for="input2-4">自动对焦：</label>
+            <input type="number" id="input2-4" name="input2-4"><br>
+            <label for="input2-5">快门速度：</label>
+            <input type="number" id="input2-5" name="input2-5"><br>
+            <button type="button" onclick="openURL('2')">设置</button>
+            <hr>
+
+            <h3>预设C</h3>
+            <label for="input3-1">定时时长：</label>
+            <input type="number" id="input3-1" name="input3-1"><br>
+            <label for="input3-2">拍摄张数：</label>
+            <input type="number" id="input3-2" name="input3-2"><br>
+            <label for="input3-3">拍摄间隔：</label>
+            <input type="number" id="input3-3" name="input3-3"><br>
+            <label for="input3-4">自动对焦：</label>
+            <input type="number" id="input3-4" name="input3-4"><br>
+            <label for="input3-5">快门速度：</label>
+            <input type="number" id="input3-5" name="input3-5"><br>
+            <button type="button" onclick="openURL('3')">设置</button>
+            <hr>
+
+            <h2><a href="/ClearPresets" style="color: red;">清空预设</a></h2>
+        </form>
+
+        <script>
+            function openURL(group) {
+                var input1 = document.getElementById("input" + group + "-1").value;
+                var input2 = document.getElementById("input" + group + "-2").value;
+                var input3 = document.getElementById("input" + group + "-3").value;
+                var input4 = document.getElementById("input" + group + "-4").value;
+                var input5 = document.getElementById("input" + group + "-5").value;
+
+                // 构建URL，将参数作为查询参数，并添加额外参数group
+                var url = '/SetPresets?group=' + group + '&input1=' + input1 + '&input2=' + input2 + '&input3=' + input3 + '&input4=' + input4 + '&input5=' + input5;
+
+                // 使用window.location.href在原有窗口中打开URL 
+                window.location.href = url;
+            } </script>
+    </center>
+</body>
+
+</html>

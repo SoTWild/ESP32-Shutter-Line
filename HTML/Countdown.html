@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>倒计时</title>
+    <style>
+        progress {
+            width: 200px;
+        }
+
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <h1 id="countdownLabel">预计剩余时间: <span id="countdown"></span></h1>
+        <div>
+            <progress id="progressBar" value="0" max="100"></progress>
+            <span id="progressText"></span>
+        </div>
+        <div id="endMessage" class="hide">
+            <h1>拍摄结束</h1>
+            <h1><a href="/">返回</a></h1>
+        </div>
+    </center>
+    <script>
+        function startCountdown(duration, displayLabel, display, progressBar, progressText, endMessage) {
+            var timer = duration, hours, minutes, seconds;
+
+            var countdownInterval = setInterval(function () {
+                hours = parseInt(timer / 3600, 10);
+                minutes = parseInt((timer % 3600) / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+
+                hours = hours < 10 ? "0" + hours : hours;
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                display.textContent = hours + ":" + minutes + ":" + seconds;
+
+                progressBar.value = ((duration - timer) / duration) * 100;
+
+                var percent = ((duration - timer) / duration) * 100;
+                progressText.textContent = percent.toFixed(2) + "%";
+
+                if (--timer < 0) {
+                    clearInterval(countdownInterval);
+                    displayLabel.classList.add("hide");
+                    progressBar.style.display = "none";
+                    progressText.style.display = "none";
+                    endMessage.style.display = "block";
+                }
+            }, 1000);
+        }
+
+        window.onload = function () {
+            var countdownTime = 10, // 倒计时时间（单位：秒）
+                displayLabel = document.querySelector('#countdownLabel'),
+                display = document.querySelector('#countdown'),
+                progressBar = document.querySelector('#progressBar'),
+                progressText = document.querySelector('#progressText'),
+                endMessage = document.querySelector('#endMessage');
+
+            startCountdown(countdownTime, displayLabel, display, progressBar, progressText, endMessage);
+        };
+    </script>
+</body>
+
+</html>

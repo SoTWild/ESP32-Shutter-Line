@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>其他设置</title>
+    <script>
+        function updateValue() {
+            var value = document.getElementById("slider").value;
+            document.getElementById("current-value").textContent = value;
+        }
+        function sendValue() {
+            var value = document.getElementById("slider").value;
+            var url = "/?ScreenBrightness=" + value;
+            alert(value);
+            // 这里可以使用Ajax或者其他方法发送数据给服务器
+        }
+    </script>
+</head>
+
+<body>
+    <center>
+        <h1>设置屏幕亮度</h1>
+        <input type="range" id="slider" min="0" max="100" step="1" oninput="updateValue()" />
+        <p>当前亮度：<span id="current-value">0</span></p>
+        <button onclick="sendValue()">设置亮度</button>
+    </center>
+</body>
+
+</html>

@@ -135,9 +135,72 @@ Visual Studio Code + Platform IO
 
 ## ESP32-Shutter-Line 软件
 
-###### 
+### 单片机端：
 
 
+
+### 网页端：
+
+> 注：本人缺少 HTML 网页编写经验，便使用了 **ChatGPT 3.5** 协助完成项目。
+
+核心实现原理：通过 ESP32 的`server.arg()` API 以及网页端的`查询参数`进行**网页→ESP32**的通信。
+
+#### 例：
+
+```html
+<a href = "/Example?Parameter=1">SET</a>
+```
+
+> 客户端效果大概是这样：<a href="/Example?Parameter=1">SET</a>
+
+点击 **SET** 之后会跳转到`/Example`下，在 ESP32 端使用`server.on("/Example", HandleRoot);`设置对应的回调函数`HandleRoot()`：
+
+```c
+void HandleRoot() {
+  int Value = atoi(server.arg("Parameter").c_str());
+}
+```
+
+此时会获取`Parameter`的值，也就是一开始链接中定义的`1`。如此便实现客户端与 ESP32 的通信。
+
+> 注：这里`Value`为`int`类型，因此要经过`String`→`int`的转换，根据实际情况改变用法。
+
+#### 功能——手动设置参数：
+
+###### 设置数字输入框：
+
+```html
+<label for="input">XXX</label>
+	<input type="number" id="input" name="input">
+```
+
+###### 设置按钮进行查询参数打包和发送：
+
+```html
+<button type="button" onclick="openURL()">发送数据</button>
+```
+
+###### 查询参数打包并发送函数：
+
+```html
+function openURL() {
+            var T = document.getElementById("input1").value;
+            var N = document.getElementById("input2").value;
+            var I = document.getElementById("input3").value;
+            var A = document.getElementById("input4").value;
+            var S = document.getElementById("input5").value;
+
+            // 构建URL，将五个参数作为查询参数
+            var url = '/?T=' + T + '&N=' + N + '&I=' + I + '&A=' + A + '&S=' + S;
+
+            // 使用window.location.href在原有窗口中打开URL
+            window.location.href = url;
+}
+```
+
+#### 功能——设置预设参数：
+
+在查询参数中**添加额外参数**`group`告诉 ESP32 是哪一组预设即可。
 
 ------
 
@@ -154,3 +217,5 @@ Visual Studio Code + Platform IO
 > for函数int i请赋值
 >
 > 乘除进制单位转换
+>
+> HTML到cpp的大小写

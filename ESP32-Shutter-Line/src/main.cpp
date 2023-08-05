@@ -3,18 +3,23 @@
   ========================
   2023/08/01 编写菜单界面 & Presets逻辑
   2023/08/02 编写Start
+  2023/08/03 HTML
+  2023/08/04 WirelessControl 核心实现
+  2023/08/05 WirelessControl 完善 & Presets & SetPresets 完善
 */
 
 #include <Arduino.h>
-//#include <WiFi.h>
+#include <WiFi.h>
+#include <WebServer.h>
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <FS.h>
 #include <SD.h>
 #include <SPIFFS.h>
-#include "Function.h"
+#include "HTML.h"
 
 TFT_eSPI tft = TFT_eSPI();
+WebServer server(80);
 
 const char *ssid = "ESP32-Shutter-Line";
 const char *psword = "123456789";
@@ -26,6 +31,8 @@ int FOCUS_PIN = 25;
 int SHUTTER_PIN = 26;
 int BACKLIGHT_PIN = 22;
 int REFRESH = 0;
+int CameraFocusSpeed = 1500; //ms
+int countdownTime = 0;  //s
 int Sel = 1;
 int Set = 0;
 int T = 0;
@@ -36,6 +43,27 @@ int S = 1;
 
 char buf[128];
 unsigned long line = 1;
+
+const char* mergeStrings(const char* A, int number, const char* B) {
+    // 计算所需的空间大小
+    int size = strlen(A) + 12 + strlen(B) + 1;  // 12是数字转换为字符串的最大长度，额外1用于存储字符串结束符
+
+    // 分配内存来存储结果字符串
+    char* result = (char*)malloc(size * sizeof(char));
+
+    // 将字符串 A 复制到结果字符串中
+    strcpy(result, A);
+
+    // 将数字转换为字符串并追加到结果字符串中
+    char numberStr[12];  // 分配足够的空间来存储数字的字符串表示
+    sprintf(numberStr, "%d", number);
+    strcat(result, numberStr);
+
+    // 将字符串 B 追加到结果字符串中
+    strcat(result, B);
+
+    return result;  // 返回合并后的字符串
+}
 
 String readFileLine(const char* path, int num) {
   Serial.printf("Reading file: %s line: %d\n", path, num);
@@ -149,7 +177,16 @@ void DrawSel() {
 }
 
 void DrawWireless() {
-
+  tft.fillScreen(TFT_BLACK);
+  tft.setCursor(40,90);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(1);
+  IPAddress myIP = WiFi.softAPIP();
+  tft.print("AP IP address: ");
+  tft.setTextColor(TFT_RED);
+  tft.setCursor(50,120);
+  tft.print(myIP);
+  tft.setTextColor(TFT_WHITE);
 }
 
 void DrawStart() {
@@ -170,16 +207,257 @@ void SET() {
   Set++;
 }
 
+void Shoot(int TimeSet ,int Number ,int Interval ,int Auto ,int Speed) {
+  DrawStart();
+  countdownTime = TimeSet + Number * Interval;
+  Serial.println(countdownTime);
+  const char* Result = mergeStrings(Countdown_1, countdownTime, Countdown_2);
+  server.send(200, "text/html", Result);  //倒计时页面
+      TimeSet = TimeSet * 1000;
+      Interval = Interval * 1000;
+      if(Speed != 0) {
+        if(Speed < 0) {
+          Speed = -Speed * 1000;
+        }
+        else {
+          Speed = 1000 / Speed;
+        }
+      }
+      Serial.println(TimeSet);
+      Serial.println(Interval);
+      Serial.println(Speed);
+
+      delay(TimeSet);//Time Setting
+      for(int i = 0; i < Number; ++i) {//Start Shooting
+        Serial.println(i + 1);
+        if(Auto == 1) {//Auto Focus
+          if(Speed == 0) {
+            Serial.println("Start Shoot-Auto Focus & Automatic Exposure");
+            digitalWrite(FOCUS_PIN, HIGH);
+            //delay(CameraFocusSpeed);
+            digitalWrite(SHUTTER_PIN, HIGH);
+            delay(500);  //Automatic Exposure Time
+            digitalWrite(FOCUS_PIN, LOW);
+            digitalWrite(SHUTTER_PIN, LOW);
+          }
+          else {
+            Serial.println("Start Shoot-Auto Focus & BULB");
+            digitalWrite(FOCUS_PIN, HIGH);
+            //delay(CameraFocusSpeed);
+            digitalWrite(SHUTTER_PIN, HIGH);
+            delay(Speed); //Shutter Speed
+            digitalWrite(FOCUS_PIN, LOW);
+            digitalWrite(SHUTTER_PIN, LOW);
+          }
+        }
+        if(Auto == 0) {
+          if(Speed == 0) {
+            Serial.println("Start Shoot-Manual Focus & Automatic Exposure");
+            digitalWrite(SHUTTER_PIN, HIGH);
+            delay(500);
+            digitalWrite(SHUTTER_PIN, LOW);
+          }
+          else {
+            Serial.println("Start Shoot-Manual Focus & BULB");
+            digitalWrite(SHUTTER_PIN, HIGH);
+            delay(Speed);//Shutter Speed
+            digitalWrite(SHUTTER_PIN, LOW);
+          }
+        }
+        delay(Interval);//Shooting Interval
+      }
+      Set = 0;
+      Sel = 1;
+      REFRESH = 1;
+      DrawInterface();
+}
+
+void favicon() {
+
+}
+
+void ShootHandleRoot() {
+  int input1Value = atoi(server.arg("input1").c_str());
+  int input2Value = atoi(server.arg("input2").c_str());
+  int input3Value = atoi(server.arg("input3").c_str());
+  int input4Value = atoi(server.arg("input4").c_str());
+  int input5Value = atoi(server.arg("input5").c_str());
+
+  Serial.println(input1Value);
+  Serial.println(input2Value);
+  Serial.println(input3Value);
+  Serial.println(input4Value);
+  Serial.println(input5Value);
+
+  Shoot(input1Value ,input2Value ,input3Value ,input4Value ,input5Value);
+}
+
+void NotFound() {
+  //server.send(200, "text/html", HandleNotFound);
+  server.sendHeader("Location", "/", true);
+  server.send(302, "text/plain", "");
+}
+
+void HomePage() {
+  server.send(200, "text/html", WirelessControlTerminal);
+}
+
+void ManualSet() {
+  server.send(200, "text/html", ManuallySetting);
+}
+
+void Presets() {
+  std::string Result = std::string(Presets_1) + 
+  readFileLine("/Presets_A.txt",1).c_str() + "<p>" + Presets_2 +
+  readFileLine("/Presets_A.txt",2).c_str() + "<p>" + Presets_3 +
+  readFileLine("/Presets_A.txt",3).c_str() + "<p>" + Presets_4 +
+  readFileLine("/Presets_A.txt",4).c_str() + "<p>" + Presets_5 +
+  readFileLine("/Presets_A.txt",5).c_str() + Presets_6 +
+  readFileLine("/Presets_B.txt",1).c_str() + "<p>" + Presets_2 +
+  readFileLine("/Presets_B.txt",2).c_str() + "<p>" + Presets_3 +
+  readFileLine("/Presets_B.txt",3).c_str() + "<p>" + Presets_4 +
+  readFileLine("/Presets_B.txt",4).c_str() + "<p>" + Presets_5 +
+  readFileLine("/Presets_B.txt",5).c_str() + Presets_7 +
+  readFileLine("/Presets_C.txt",1).c_str() + "<p>" + Presets_2 +
+  readFileLine("/Presets_C.txt",2).c_str() + "<p>" + Presets_3 +
+  readFileLine("/Presets_C.txt",3).c_str() + "<p>" + Presets_4 +
+  readFileLine("/Presets_C.txt",4).c_str() + "<p>" + Presets_5 +
+  readFileLine("/Presets_C.txt",5).c_str() + Presets_8;
+
+  server.send(200, "text/html", Result.c_str());
+}
+
+void PresetsA() {
+  T = atoi(readFileLine("/Presets_A.txt",1).c_str());
+            N = atoi(readFileLine("/Presets_A.txt",2).c_str());
+            I = atoi(readFileLine("/Presets_A.txt",3).c_str());
+            A = atoi(readFileLine("/Presets_A.txt",4).c_str());
+            S = atoi(readFileLine("/Presets_A.txt",5).c_str());
+  Shoot(T ,N ,I ,A ,S);
+}
+
+void PresetsB() {
+  T = atoi(readFileLine("/Presets_B.txt",1).c_str());
+            N = atoi(readFileLine("/Presets_B.txt",2).c_str());
+            I = atoi(readFileLine("/Presets_B.txt",3).c_str());
+            A = atoi(readFileLine("/Presets_B.txt",4).c_str());
+            S = atoi(readFileLine("/Presets_B.txt",5).c_str());
+            Shoot(T ,N ,I ,A ,S);
+}
+
+void PresetsC() {
+  T = atoi(readFileLine("/Presets_C.txt",1).c_str());
+            N = atoi(readFileLine("/Presets_C.txt",2).c_str());
+            I = atoi(readFileLine("/Presets_C.txt",3).c_str());
+            A = atoi(readFileLine("/Presets_C.txt",4).c_str());
+            S = atoi(readFileLine("/Presets_C.txt",5).c_str());
+            Shoot(T ,N ,I ,A ,S);
+}
+
+void SetPresets() {
+  server.send(200, "text/html", SetPresets_html);
+}
+
+void SetPresetsHandleRoot() {
+  int Group = atoi(server.arg("group").c_str());
+  int input1Value = atoi(server.arg("input1").c_str());
+  int input2Value = atoi(server.arg("input2").c_str());
+  int input3Value = atoi(server.arg("input3").c_str());
+  int input4Value = atoi(server.arg("input4").c_str());
+  int input5Value = atoi(server.arg("input5").c_str());
+
+  Serial.println(Group);
+  Serial.println(input1Value);
+  Serial.println(input2Value);
+  Serial.println(input3Value);
+  Serial.println(input4Value);
+  Serial.println(input5Value);
+
+  if (Group == 1) {
+    File file = SPIFFS.open("/Presets_A.txt", FILE_WRITE);
+    if(!file) {
+      Serial.println("open file failed");
+    }
+    file.println(input1Value);//T
+    file.println(input2Value);//N
+    file.println(input3Value);//I
+    file.println(input4Value);//A
+    file.println(input5Value);//S
+    file.close();
+  }
+  else if (Group == 2) {
+    File file = SPIFFS.open("/Presets_B.txt", FILE_WRITE);
+    if(!file) {
+      Serial.println("open file failed");
+    }
+    file.println(input1Value);//T
+    file.println(input2Value);//N
+    file.println(input3Value);//I
+    file.println(input4Value);//A
+    file.println(input5Value);//S
+    file.close();
+  }
+  else if (Group == 3) {
+    File file = SPIFFS.open("/Presets_C.txt", FILE_WRITE);
+    if(!file) {
+      Serial.println("open file failed");
+    }
+    file.println(input1Value);//T
+    file.println(input2Value);//N
+    file.println(input3Value);//I
+    file.println(input4Value);//A
+    file.println(input5Value);//S
+    file.close();
+  }
+  server.send(200, "text/html", Success);
+}
+
+void ClearPresets() {
+  //SPIFFS.format();
+  SPIFFS.remove("/Presets_A.txt");
+  SPIFFS.remove("/Presets_B.txt");
+  SPIFFS.remove("/Presets_C.txt");
+  server.send(200, "text/html", Success);
+}
+
+void WirelessControl() {
+  DrawWireless();
+
+  server.on("/", HomePage);
+  server.on("/M", ShootHandleRoot);
+  server.on("/Presets.html", Presets);
+  server.on("/PresetsA", PresetsA);
+  server.on("/PresetsB", PresetsB);
+  server.on("/PresetsC", PresetsC);
+  server.on("/SetPresets.html", SetPresets);
+  server.on("/ClearPresets", ClearPresets);
+  server.on("/SetPresets", SetPresetsHandleRoot);
+  server.on("/ManuallySetting.html", ManualSet);
+  server.on("/favicon.ico", favicon);
+  server.onNotFound(NotFound);
+  server.begin();
+
+  while(1) {
+    server.handleClient();
+    if(digitalRead(BACK_PIN) == 0) {
+          DrawInterface();
+          REFRESH = 1;
+          Set = 0;
+          break;
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   
-  /*Serial.println("Initiate WiFi AP");
+  Serial.println("Initiate WiFi AP");
   WiFi.softAP(ssid, psword);
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("SSID: ");
   Serial.println(ssid);
   Serial.print("AP IP address: ");
-  Serial.println(myIP);*/
+  Serial.println(myIP);
 
   Serial.println("Initiate SPIFFS");
   //SPIFFS.format();
@@ -208,7 +486,7 @@ void setup() {
     }
     file.close();
   }
-  File file = SPIFFS.open("/Presets_A.txt", FILE_WRITE);//延时设置
+  /*File file = SPIFFS.open("/Presets_A.txt", FILE_WRITE);//延时设置
   if(!file) {
     Serial.println("open file failed");
   }
@@ -237,7 +515,7 @@ void setup() {
   file.println("0");//I
   file.println("0");//A
   file.println("-45");//S
-  file.close();
+  file.close();*/
 
   tft.init();
   tft.setRotation(0);
@@ -251,12 +529,14 @@ void setup() {
   pinMode(BACK_PIN, INPUT_PULLUP);
   pinMode(FOCUS_PIN, OUTPUT);
   pinMode(SHUTTER_PIN, OUTPUT);
+  pinMode(BACKLIGHT_PIN, OUTPUT);
   attachInterrupt(digitalPinToInterrupt(SELECT_PIN), Select, FALLING);
   attachInterrupt(digitalPinToInterrupt(SET_PIN), SET, FALLING);
   //attachInterrupt(digitalPinToInterrupt(BACK_PIN), BACK, FALLING);
   //digitalWrite(SHUTTER_PIN, HIGH);
   //delay(100);
   //digitalWrite(SHUTTER_PIN, LOW);
+  digitalWrite(BACKLIGHT_PIN, HIGH);
 
   REFRESH = 1;
 }
@@ -395,69 +675,11 @@ void loop() {
       }
     }
     else if(Sel == 3) {
-      DrawWireless();
       Set = 0;
-      while(1) {//Wireless
-        /*Code*/
-      }
+      WirelessControl();  //Wireless
     }
     else if(Sel == 4) {//Start
-      DrawStart();
-      int i;
-      int t;
-      int in;
-      int s;
-      t = T * 1000;
-      in = I * 1000;
-      if(S != 0) {
-        if(S < 0) {
-          s = -S * 1000;
-        }
-        else {
-          s = 1000 / S;
-        }
-      }
-      Serial.println(t);
-      Serial.println(in);
-      Serial.println(s);
-      delay(t);//Time Setting
-      for(i = 0; i < N; ++i) {//Start Shooting
-        Serial.println(i + 1);
-        if(A == 1) {//Auto Focus
-          if(S == 0) {
-            digitalWrite(FOCUS_PIN, HIGH);
-            delay(3000);
-            digitalWrite(SHUTTER_PIN, HIGH);
-            delay(3000);
-            digitalWrite(FOCUS_PIN, LOW);
-            digitalWrite(SHUTTER_PIN, LOW);
-          }
-          else {
-            digitalWrite(FOCUS_PIN, HIGH);
-            delay(3000);
-            digitalWrite(SHUTTER_PIN, HIGH);
-            digitalWrite(FOCUS_PIN, LOW);
-            digitalWrite(SHUTTER_PIN, LOW);
-          }
-        }
-        if(A == 0) {
-          if(S == 0) {
-            digitalWrite(SHUTTER_PIN, HIGH);
-            delay(1500);
-            digitalWrite(SHUTTER_PIN, LOW);
-          }
-          else {
-            digitalWrite(SHUTTER_PIN, HIGH);
-            delay(s);//Shutter Speed
-            digitalWrite(SHUTTER_PIN, LOW);
-          }
-        }
-        delay(in);//Shooting Interval
-      }
-      Set = 0;
-      Sel = 1;
-      REFRESH = 1;
-      DrawInterface();
+      Shoot(T ,N ,I ,A ,S);
     }
   }
   else {
