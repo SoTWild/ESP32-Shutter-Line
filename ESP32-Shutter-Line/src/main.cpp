@@ -539,6 +539,8 @@ void setup() {
   digitalWrite(BACKLIGHT_PIN, HIGH);
 
   REFRESH = 1;
+
+  WirelessControl();
 }
 
 void loop() {
